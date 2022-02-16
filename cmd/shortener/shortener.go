@@ -1,22 +1,25 @@
 package main
 
 import (
-	"strconv"
+	"bytes"
+	"encoding/base64"
 )
 
-func shortenLink(link string) string {
+func ShortenLink(link string) string {
 	var key string
 
-	for i := 0; i < len(urlsDB); i++ {
-		if urlsDB[i].Url == link {
-			key = urlsDB[i].Id
+	for i := 0; i < len(UrlsDB); i++ {
+		if UrlsDB[i].Url == link {
+			key = UrlsDB[i].Key
 			return key
 		}
 	}
 	if key == "" {
-		newKey := strconv.Itoa(len(urlsDB))
-		urlsDB = append(urlsDB, SavedUrl{newKey, link})
-		key = newKey
+		buf := bytes.Buffer{}
+		encoder := base64.NewEncoder(base64.URLEncoding, &buf)
+		encoder.Write([]byte(link))
+		UrlsDB = append(UrlsDB, SavedUrl{buf.String(), link})
+		key = buf.String()
 	}
 	return key
 }
