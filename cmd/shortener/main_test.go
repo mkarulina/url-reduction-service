@@ -62,12 +62,13 @@ func TestPostLinkHandler(t *testing.T) {
 }
 
 func TestGetLinkHandler(t *testing.T) {
-	UrlsDB = append(UrlsDB, SavedUrl{"testKey", "google.com"})
+	UrlsDB = append(UrlsDB, SavedURL{"testKey", "google.com"})
 	t.Log(UrlsDB)
 
 	type want struct {
 		statusCode int
 		body string
+		location string
 	}
 	tests := []struct {
 		name string
@@ -80,6 +81,7 @@ func TestGetLinkHandler(t *testing.T) {
 			want {
 				307,
 				"google.com",
+				"google.com",
 			},
 		},
 		{
@@ -88,6 +90,7 @@ func TestGetLinkHandler(t *testing.T) {
 			want {
 				200,
 				"Url not found",
+				"",
 			},
 		},
 	}
@@ -107,7 +110,7 @@ func TestGetLinkHandler(t *testing.T) {
 
 			assert.Equal(t, test.want.statusCode, result.StatusCode)
 			assert.Equal(t, test.want.body, string(body))
-
+			assert.Equal(t, test.want.location, result.Header.Get("Location"))
 		})
 	}
 }

@@ -30,9 +30,9 @@ func TestGetLinkByKey(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			UrlsDB = append(UrlsDB, SavedUrl{test.addedKey, test.link})
-			foundUrl := GetLinkByKey(test.searchKey)
-			require.Equal(t, test.want, foundUrl, "found value does not match expected")
+			UrlsDB = append(UrlsDB, SavedURL{test.addedKey, test.link})
+			foundURL := GetLinkByKey(test.searchKey)
+			require.Equal(t, test.want, foundURL, "found value does not match expected")
 		})
 	}
 }

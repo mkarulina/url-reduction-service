@@ -5,7 +5,7 @@ func GetLinkByKey(linkKey string) string {
 
 	for i := 0; i < len(UrlsDB); i++ {
 		if UrlsDB[i].Key == linkKey {
-			foundLink = UrlsDB[i].Url
+			foundLink = UrlsDB[i].URL
 		}
 	}
 	return foundLink

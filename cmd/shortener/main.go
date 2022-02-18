@@ -10,11 +10,11 @@ import (
 	"strings"
 )
 
-type SavedUrl struct {
-	Key, Url string
+type SavedURL struct {
+	Key, URL string
 }
 
-var UrlsDB []SavedUrl
+var UrlsDB []SavedURL
 
 func main() {
 	r := chi.NewRouter()
@@ -40,6 +40,7 @@ func GetLinkHandler(w http.ResponseWriter, r *http.Request)  {
 		w.Header().Set("Location", foundLink)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 		w.Write([]byte(foundLink))
+		return
 	}
 }
 
