@@ -7,11 +7,14 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 )
 
 
 func TestPostLinkHandler(t *testing.T) {
+	c := NewContainer()
+
 	type want struct {
 		statusCode int
 		key string
@@ -46,7 +49,7 @@ func TestPostLinkHandler(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, test.url, bytes.NewBufferString(test.body))
 			rec := httptest.NewRecorder()
-			handler := http.HandlerFunc(PostLinkHandler)
+			handler := http.HandlerFunc(c.PostLinkHandler)
 			handler.ServeHTTP(rec, req)
 			result := rec.Result()
 
@@ -62,8 +65,11 @@ func TestPostLinkHandler(t *testing.T) {
 }
 
 func TestGetLinkHandler(t *testing.T) {
-	UrlsDB = append(UrlsDB, SavedURL{"testKey", "google.com"})
-	t.Log(UrlsDB)
+	c := NewContainer()
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go c.AddLinkToDB("http://google.com", "testKey", &wg)
+	wg.Wait()
 
 	type want struct {
 		statusCode int
@@ -80,8 +86,8 @@ func TestGetLinkHandler(t *testing.T) {
 			"/testKey",
 			want {
 				307,
-				"google.com",
-				"google.com",
+				"http://google.com",
+				"http://google.com",
 			},
 		},
 		{
@@ -99,7 +105,7 @@ func TestGetLinkHandler(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, test.url, nil)
 			rec := httptest.NewRecorder()
-			handler := http.HandlerFunc(GetLinkHandler)
+			handler := http.HandlerFunc(c.GetLinkHandler)
 			handler.ServeHTTP(rec, req)
 			result := rec.Result()
 

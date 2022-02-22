@@ -1,12 +1,10 @@
 package main
 
-func GetLinkByKey(linkKey string) string {
+func (c *Container) GetLinkByKey(linkKey string) string {
 	var foundLink string
 
-	for i := 0; i < len(UrlsDB); i++ {
-		if UrlsDB[i].Key == linkKey {
-			foundLink = UrlsDB[i].URL
-		}
+	if val, found := c.urls[linkKey]; found {
+		foundLink = val
 	}
 	return foundLink
 }

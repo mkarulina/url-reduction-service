@@ -6,6 +6,8 @@ import (
 )
 
 func TestShortenLink(t *testing.T) {
+	c := NewContainer()
+
 	tests := []struct {
 		name string
 		link string
@@ -29,7 +31,7 @@ func TestShortenLink(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			key := ShortenLink(test.link)
+			key := c.ShortenLink(test.link)
 			require.NotEmptyf(t, key, "key not generated", test.link)
 		})
 	}

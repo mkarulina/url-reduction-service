@@ -3,22 +3,30 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
+	"sync"
 )
 
-func ShortenLink(link string) string {
+func (c *Container) ShortenLink(link string) string {
 	var key string
 
-	for i := 0; i < len(UrlsDB); i++ {
-		if UrlsDB[i].URL == link {
-			key = UrlsDB[i].Key
+	for k, v := range c.urls {
+		if v == link {
+			key = k
+			return key
 		}
 	}
+
 	if key == "" {
+		var wg sync.WaitGroup
 		buf := bytes.Buffer{}
+
 		encoder := base64.NewEncoder(base64.URLEncoding, &buf)
 		encoder.Write([]byte(link))
-		UrlsDB = append(UrlsDB, SavedURL{buf.String(), link})
 		key = buf.String()
+
+		wg.Add(1)
+		go c.AddLinkToDB(link, buf.String(), &wg)
+		wg.Wait()
 	}
 	return key
 }
