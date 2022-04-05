@@ -14,15 +14,15 @@ func TestShortenLink(t *testing.T) {
 	}{
 		{
 			"I can generate key for url without protocol",
-			"ya.ru/1",
+			"testhost.ru/21",
 		},
 		{
 			"I can generate key for url with http",
-			"http://ya.ru/2",
+			"http://testhost.ru/22",
 		},
 		{
 			"I can generate key for url with https",
-			"https://ya.ru/3",
+			"httpы://testhost.ru/23",
 		},
 		{
 			"I can generate key for url with params",
