@@ -1,9 +1,27 @@
-package main
+package handlers
 
 import (
 	"github.com/mkarulina/url-reduction-service/internal/storage"
 	"log"
+	"net/http"
+	"strings"
 )
+
+func (c *Container) GetLinkHandler(w http.ResponseWriter, r *http.Request) {
+	linkKey := strings.Split(r.URL.Path, "/")[1]
+	foundLink := c.GetLinkByKey(linkKey)
+
+	if foundLink == "" {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Url not found"))
+		return
+	} else {
+		w.Header().Set("Location", foundLink)
+		w.WriteHeader(http.StatusTemporaryRedirect)
+		w.Write([]byte(foundLink))
+		return
+	}
+}
 
 func (c *Container) GetLinkByKey(linkKey string) string {
 	var foundLink string

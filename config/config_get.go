@@ -15,7 +15,7 @@ func GetConfig(variable string) string {
 		}
 	})
 	if foundFlag == "" {
-		viper.AddConfigPath("../../config")
+		viper.AddConfigPath("./config/")
 		viper.SetConfigName("config")
 		if err := viper.ReadInConfig(); err != nil {
 			log.Println(err)

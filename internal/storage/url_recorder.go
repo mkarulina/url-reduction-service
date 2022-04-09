@@ -6,8 +6,8 @@ import (
 )
 
 type Link struct {
-	Key  string `json:"key"`
-	Link string `json:"link"`
+	Key  string
+	Link string
 }
 
 type Recorder struct {
