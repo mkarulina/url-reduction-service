@@ -57,10 +57,6 @@ func (gw gzipReader) Read(b []byte) (int, error) {
 
 func gzipHandler(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			handler.ServeHTTP(w, r)
-			return
-		}
 
 		if strings.Contains(r.Header.Get("Content-Type"), "gzip") {
 			gzr, err := gzip.NewReader(r.Body)
@@ -76,6 +72,11 @@ func gzipHandler(handler http.Handler) http.Handler {
 				return
 			}
 			handler.ServeHTTP(gzipReader{w, gzr}, r)
+
+		} else if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			handler.ServeHTTP(w, r)
+			return
+
 		} else {
 			gzw, err := gzip.NewWriterLevel(w, gzip.BestCompression)
 			if err != nil {
