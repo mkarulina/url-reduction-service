@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/mkarulina/url-reduction-service/internal/storage"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -41,10 +42,9 @@ func (c *Container) GetLinkByKey(linkKey string) string {
 			if readLine == nil {
 				break
 			}
-			if err != nil {
+			if err != nil && err != io.EOF {
 				log.Fatal(err)
 			}
-
 			if readLine.Key == linkKey {
 				foundLink = readLine.Link
 				break

@@ -39,7 +39,7 @@ func TestShortenHandler(t *testing.T) {
 			"http://testhost.ru/3",
 			want{
 				201,
-				`^[0-9,a-zA-Z]*$`,
+				`(.*\/)?[0-9,a-zA-Z]*$`,
 				false,
 			},
 		},

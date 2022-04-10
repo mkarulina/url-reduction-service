@@ -15,7 +15,7 @@ func TestGetLinkHandler(t *testing.T) {
 	c := NewContainer()
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go c.AddLinkToDB(&storage.Link{"testKey2", "http://testhost.ru/2"}, &wg)
+	go c.AddLinkToDB(&storage.Link{Key: "testKey2", Link: "http://testhost.ru/2"}, &wg)
 	wg.Wait()
 
 	type want struct {
@@ -72,7 +72,7 @@ func TestGetLinkByKey(t *testing.T) {
 	c := NewContainer()
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go c.AddLinkToDB(&storage.Link{"testKey11", "http://testhost.ru/11"}, &wg)
+	go c.AddLinkToDB(&storage.Link{Key: "testKey11", Link: "http://testhost.ru/11"}, &wg)
 	wg.Wait()
 
 	tests := []struct {
@@ -103,7 +103,7 @@ func TestGetKeyByLink(t *testing.T) {
 	c := NewContainer()
 	var wg sync.WaitGroup
 	wg.Add(1)
-	go c.AddLinkToDB(&storage.Link{"testKey12", "http://testhost.ru/12"}, &wg)
+	go c.AddLinkToDB(&storage.Link{Key: "testKey12", Link: "http://testhost.ru/12"}, &wg)
 	wg.Wait()
 
 	tests := []struct {

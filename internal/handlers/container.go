@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/mkarulina/url-reduction-service/config"
+	"github.com/spf13/viper"
 	"sync"
 )
 
@@ -12,7 +12,7 @@ type Container struct {
 }
 
 func NewContainer() Container {
-	filePath := config.GetConfig("FILE_STORAGE_PATH")
+	filePath := viper.GetString("FILE_STORAGE_PATH")
 	c := Container{
 		mu:   new(sync.Mutex),
 		urls: map[string]string{},

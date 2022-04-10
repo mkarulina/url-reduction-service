@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/base64"
 	"github.com/asaskevich/govalidator"
-	"github.com/mkarulina/url-reduction-service/config"
 	"github.com/mkarulina/url-reduction-service/internal/storage"
+	"github.com/spf13/viper"
 	"io"
 	"log"
 	"net/http"
@@ -47,10 +47,10 @@ func (c *Container) ShortenLink(link string) string {
 		key = buf.String()
 
 		wg.Add(1)
-		go c.AddLinkToDB(&storage.Link{key, link}, &wg)
+		go c.AddLinkToDB(&storage.Link{Key: key, Link: link}, &wg)
 		wg.Wait()
 	}
-	shortLink := config.GetConfig("BASE_URL") + key
+	shortLink := viper.GetString("BASE_URL") + "/" + key
 	return shortLink
 }
 

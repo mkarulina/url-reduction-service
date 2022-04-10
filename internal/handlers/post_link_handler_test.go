@@ -2,17 +2,25 @@ package handlers
 
 import (
 	"bytes"
-	"github.com/mkarulina/url-reduction-service/cmd/shortener"
+	"github.com/mkarulina/url-reduction-service/config"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
 func TestPostLinkHandler(t *testing.T) {
-	c := main.NewContainer()
+	c := NewContainer()
+
+	_, err := config.LoadConfig("../../config")
+	if err != nil {
+		log.Fatal(err)
+	}
+	baseURL := viper.GetString("BASE_URL")
 
 	type want struct {
 		statusCode int
@@ -30,7 +38,7 @@ func TestPostLinkHandler(t *testing.T) {
 			"http://testhost.ru/1",
 			want{
 				201,
-				`^[0-9,a-zA-Z]*$`,
+				baseURL + `\/[0-9,a-zA-Z]*$`,
 			},
 		},
 		{
@@ -64,7 +72,7 @@ func TestPostLinkHandler(t *testing.T) {
 }
 
 func TestShortenLink(t *testing.T) {
-	c := main.NewContainer()
+	c := NewContainer()
 
 	tests := []struct {
 		name string
