@@ -18,11 +18,6 @@ type gzipWriter struct {
 	Writer io.Writer
 }
 
-type gzipReader struct {
-	http.ResponseWriter
-	Reader io.Reader
-}
-
 func main() {
 	_, err := config.LoadConfig("config")
 	if err != nil {
@@ -51,43 +46,24 @@ func (gw gzipWriter) Write(b []byte) (int, error) {
 	return gw.Writer.Write(b)
 }
 
-func (gw gzipReader) Read(b []byte) (int, error) {
-	return gw.Reader.Read(b)
-}
-
 func gzipHandler(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		if strings.Contains(r.Header.Get("Content-Type"), "gzip") {
-			gzr, err := gzip.NewReader(r.Body)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			defer gzr.Close()
-
-			_, err = io.ReadAll(gzr)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			handler.ServeHTTP(gzipReader{w, gzr}, r)
-
-		} else if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			handler.ServeHTTP(w, r)
 			return
-
-		} else {
-			gzw, err := gzip.NewWriterLevel(w, gzip.BestCompression)
-			if err != nil {
-				io.WriteString(w, err.Error())
-				return
-			}
-			defer gzw.Close()
-
-			w.Header().Set("Content-Encoding", "gzip")
-			handler.ServeHTTP(gzipWriter{w, gzw}, r)
 		}
 
+		gz, err := gzip.NewWriterLevel(w, gzip.BestCompression)
+		if err != nil {
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
+		defer gz.Close()
+
+		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Set("Vary", "Accept-Encoding")
+		w.Header().Del("Content-Length")
+		handler.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
 	})
+
 }
