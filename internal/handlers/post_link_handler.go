@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/base64"
 	"github.com/asaskevich/govalidator"
 	"github.com/mkarulina/url-reduction-service/internal/storage"
@@ -13,13 +14,29 @@ import (
 )
 
 func (c *Container) PostLinkHandler(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
+	var reader io.Reader
+
+	if r.Header.Get(`Content-Encoding`) == `gzip` {
+		gz, err := gzip.NewReader(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		reader = gz
+		defer gz.Close()
+	} else {
+		reader = r.Body
+	}
+
+	body, err := io.ReadAll(reader)
 	if err != nil {
 		log.Println("can't read body", err)
 		return
 	}
+
 	reqValue := string(body)
 	validURL := govalidator.IsURL(reqValue)
+
 	if !validURL {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Проверьте формат url в теле запроса"))
