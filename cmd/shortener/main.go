@@ -1,23 +1,30 @@
 package main
 
 import (
-	"github.com/asaskevich/govalidator"
+	"compress/gzip"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"github.com/mkarulina/url-reduction-service/config"
+	"github.com/mkarulina/url-reduction-service/internal/handlers"
+	"github.com/spf13/viper"
 	"io"
 	"log"
 	"net/http"
 	"strings"
-	"sync"
 )
 
-type Container struct {
-	mu       *sync.Mutex
-	urls map[string]string
+type gzipWriter struct {
+	http.ResponseWriter
+	Writer io.Writer
 }
 
 func main() {
-	c := NewContainer()
+	_, err := config.LoadConfig("config")
+	if err != nil {
+		log.Fatal("cannot load config:", err)
+	}
+
+	c := handlers.NewContainer()
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -26,56 +33,38 @@ func main() {
 	r.Route("/", func(r chi.Router) {
 		r.Get("/{linkKey}", c.GetLinkHandler)
 		r.Post("/", c.PostLinkHandler)
+		r.Post("/api/shorten", c.ShortenHandler)
 	})
-	log.Fatal(http.ListenAndServe(":8080", r))
-}
 
-func NewContainer() Container {
-	c := Container{
-		urls: map[string]string{},
-		mu: new(sync.Mutex),
-	}
-	return c
-}
+	address := viper.GetString("SERVER_ADDRESS")
+	handler := gzipHandle(r)
 
-func (c *Container) AddLinkToDB(link string, key string, wg *sync.WaitGroup) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.urls[key] = link
-	wg.Done()
-}
-
-func (c *Container) GetLinkHandler(w http.ResponseWriter, r *http.Request)  {
-	linkKey := strings.Split(r.URL.Path, "/")[1]
-	foundLink := c.GetLinkByKey(linkKey)
-
-	if foundLink == "" {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Url not found"))
-		return
-	} else {
-		w.Header().Set("Location", foundLink)
-		w.WriteHeader(http.StatusTemporaryRedirect)
-		w.Write([]byte(foundLink))
-		return
+	if err := http.ListenAndServe(address, handler); err != nil {
+		log.Fatal(err)
 	}
 }
 
-func (c *Container) PostLinkHandler(w http.ResponseWriter, r *http.Request)  {
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
-	}
-	reqValue := string(body)
-	validURL := govalidator.IsURL(reqValue)
-	if !validURL {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Проверьте формат url в теле запроса"))
-		return
-	} else {
-		generatedKey := c.ShortenLink(reqValue)
-		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte (generatedKey))
-	}
+func (gw gzipWriter) Write(b []byte) (int, error) {
+	return gw.Writer.Write(b)
+}
+
+func gzipHandle(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		gz, err := gzip.NewWriterLevel(w, gzip.BestCompression)
+		if err != nil {
+			http.Error(w, "", http.StatusInternalServerError)
+			return
+		}
+		defer gz.Close()
+
+		w.Header().Set("Content-Encoding", "gzip")
+		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
+	})
+
 }
