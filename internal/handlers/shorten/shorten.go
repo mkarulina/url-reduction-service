@@ -1,15 +1,17 @@
-package handlers
+package shorten
 
 import (
 	"compress/gzip"
 	"encoding/json"
 	"github.com/asaskevich/govalidator"
+	"github.com/jackc/pgerrcode"
+	"github.com/mkarulina/url-reduction-service/internal/helpers"
 	"io"
 	"log"
 	"net/http"
 )
 
-func (c *Container) ShortenHandler(w http.ResponseWriter, r *http.Request) {
+func ShortenHandler(w http.ResponseWriter, r *http.Request) {
 	type receivedURL struct {
 		URL string `json:"url"`
 	}
@@ -22,6 +24,8 @@ func (c *Container) ShortenHandler(w http.ResponseWriter, r *http.Request) {
 
 	var reader io.Reader
 
+	//helpers.SetCookie(w, r)
+
 	if r.Header.Get(`Content-Encoding`) == `gzip` {
 		gz, err := gzip.NewReader(r.Body)
 		if err != nil {
@@ -33,6 +37,8 @@ func (c *Container) ShortenHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		reader = r.Body
 	}
+
+	reader = r.Body
 
 	body, err := io.ReadAll(reader)
 	if err != nil {
@@ -57,15 +63,24 @@ func (c *Container) ShortenHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(errText)
 		return
-	} else {
-		generatedLink := sentURL{c.ShortenLink(reqValue)}
-		marshalResult, err := json.Marshal(generatedLink)
-		if err != nil {
-			log.Println("can't marshal response", err)
+	}
+
+	link, err := helpers.ShortenLink(reqValue)
+	if err != nil {
+		if code := err.Error(); code == pgerrcode.UniqueViolation {
+			w.WriteHeader(http.StatusConflict)
+			w.Write([]byte(link))
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		w.Write(marshalResult)
 	}
+
+	generatedLink := sentURL{link}
+	marshalResult, err := json.Marshal(generatedLink)
+	if err != nil {
+		log.Println("can't marshal response", err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	w.Write(marshalResult)
 }

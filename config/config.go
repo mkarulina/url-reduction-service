@@ -10,6 +10,7 @@ type Config struct {
 	serverAddress string `yaml:"SERVER_ADDRESS"`
 	baseURL       string `yaml:"BASE_URL"`
 	filePath      string `yaml:"FILE_STORAGE_PATH"`
+	dbAddress     string `yaml:"DATABASE_DSN"`
 }
 
 func LoadConfig(path string) (config *Config, err error) {
@@ -29,6 +30,7 @@ func LoadConfig(path string) (config *Config, err error) {
 	flag.StringVar(&conf.serverAddress, "a", ":8080", "port to listen on")
 	flag.StringVar(&conf.baseURL, "b", "http://localhost:8080/", "base short url")
 	flag.StringVar(&conf.filePath, "f", "../urls.log", "file path for url saving")
+	flag.StringVar(&conf.dbAddress, "d", "", "data base address")
 
 	flag.Parse()
 
@@ -40,7 +42,8 @@ func LoadConfig(path string) (config *Config, err error) {
 			viper.Set("BASE_URL", &conf.baseURL)
 		case "f":
 			viper.Set("FILE_STORAGE_PATH", &conf.filePath)
-
+		case "d":
+			viper.Set("DATABASE_DSN", &conf.dbAddress)
 		}
 	})
 

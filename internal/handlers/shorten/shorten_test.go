@@ -1,8 +1,9 @@
-package handlers
+package shorten
 
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/mkarulina/url-reduction-service/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -13,7 +14,10 @@ import (
 )
 
 func TestShortenHandler(t *testing.T) {
-	c := NewContainer()
+	_, err := config.LoadConfig("../../../config")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	type requestBody struct {
 		URL string `json:"url"`
@@ -65,7 +69,7 @@ func TestShortenHandler(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodPost, test.url, bytes.NewReader(marshalBody))
 			rec := httptest.NewRecorder()
-			handler := http.HandlerFunc(c.ShortenHandler)
+			handler := http.HandlerFunc(ShortenHandler)
 			handler.ServeHTTP(rec, req)
 			result := rec.Result()
 

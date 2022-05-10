@@ -5,7 +5,13 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/mkarulina/url-reduction-service/config"
-	"github.com/mkarulina/url-reduction-service/internal/handlers"
+	"github.com/mkarulina/url-reduction-service/internal/handlers/all_urls"
+	"github.com/mkarulina/url-reduction-service/internal/handlers/batch"
+	"github.com/mkarulina/url-reduction-service/internal/handlers/get_link"
+	"github.com/mkarulina/url-reduction-service/internal/handlers/ping"
+	"github.com/mkarulina/url-reduction-service/internal/handlers/post_link"
+	"github.com/mkarulina/url-reduction-service/internal/handlers/shorten"
+	"github.com/mkarulina/url-reduction-service/internal/storage"
 	"github.com/spf13/viper"
 	"io"
 	"log"
@@ -24,16 +30,19 @@ func main() {
 		log.Fatal("cannot load config:", err)
 	}
 
-	c := handlers.NewContainer()
+	storage.New()
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
 	r.Route("/", func(r chi.Router) {
-		r.Get("/{linkKey}", c.GetLinkHandler)
-		r.Post("/", c.PostLinkHandler)
-		r.Post("/api/shorten", c.ShortenHandler)
+		r.Get("/ping", ping.PingHandler)
+		r.Get("/{linkKey}", getlink.GetLinkHandler)
+		r.Get("/api/user/urls", allurls.GetAllUrlsHandler)
+		r.Post("/", postlink.PostLinkHandler)
+		r.Post("/api/shorten", shorten.ShortenHandler)
+		r.Post("/api/shorten/batch", batch.BatchLinksHandler)
 	})
 
 	address := viper.GetString("SERVER_ADDRESS")

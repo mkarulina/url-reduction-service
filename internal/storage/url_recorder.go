@@ -5,11 +5,6 @@ import (
 	"os"
 )
 
-type Link struct {
-	Key  string `json:"key"`
-	Link string `json:"link"`
-}
-
 type Recorder struct {
 	file    *os.File
 	encoder *json.Encoder
