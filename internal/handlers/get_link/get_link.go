@@ -8,8 +8,13 @@ import (
 
 func GetLinkHandler(w http.ResponseWriter, r *http.Request) {
 	stg := storage.New()
-
-	//if validCookie := helpers.VerifyCookie(r); !validCookie {
+	//e := encryptor.New()
+	//
+	//cookie, err := r.Cookie("session_token")
+	//if err != nil {
+	//	log.Println("can't get cookie", err)
+	//}
+	//if validCookie := e.VerifyCookie(cookie.Value); !validCookie {
 	//	w.WriteHeader(http.StatusMethodNotAllowed)
 	//	return
 	//}

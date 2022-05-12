@@ -19,4 +19,7 @@ func TestPingHandler_Error(t *testing.T) {
 	result := rec.Result()
 
 	require.Equal(t, http.StatusInternalServerError, result.StatusCode)
+
+	err := result.Body.Close()
+	require.NoError(t, err)
 }

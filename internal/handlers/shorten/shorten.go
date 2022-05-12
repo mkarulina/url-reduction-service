@@ -24,7 +24,11 @@ func ShortenHandler(w http.ResponseWriter, r *http.Request) {
 
 	var reader io.Reader
 
-	//helpers.SetCookie(w, r)
+	//e := encryptor.New()
+	//if err := e.SetCookie(w, r); err != nil {
+	//	http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	return
+	//}
 
 	if r.Header.Get(`Content-Encoding`) == `gzip` {
 		gz, err := gzip.NewReader(r.Body)
@@ -68,10 +72,11 @@ func ShortenHandler(w http.ResponseWriter, r *http.Request) {
 	link, err := helpers.ShortenLink(reqValue)
 	if err != nil {
 		if code := err.Error(); code == pgerrcode.UniqueViolation {
+			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusConflict)
-			w.Write([]byte(link))
-			return
 		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
 	}
 
 	generatedLink := sentURL{link}

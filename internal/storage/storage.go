@@ -16,8 +16,10 @@ type Storage interface {
 }
 
 type storage struct {
-	mu   sync.Mutex
-	urls map[string]string
+	mu        sync.Mutex
+	urls      map[string]string
+	file      string
+	dbAddress string
 }
 
 type Link struct {
@@ -27,8 +29,10 @@ type Link struct {
 
 func New() Storage {
 	s := &storage{
-		mu:   sync.Mutex{},
-		urls: map[string]string{},
+		mu:        sync.Mutex{},
+		urls:      map[string]string{},
+		file:      viper.GetString("FILE_STORAGE_PATH"),
+		dbAddress: viper.GetString("DATABASE_DSN"),
 	}
 	return s
 }
@@ -37,21 +41,18 @@ func (s *storage) AddLinkToDB(link *Link) error {
 	var wg sync.WaitGroup
 	var err error
 
-	db := viper.GetString("DATABASE_DSN")
-	file := viper.GetString("FILE_STORAGE_PATH")
-
 	doIncrement := func() error {
 		s.mu.Lock()
 		defer s.mu.Unlock()
 
-		if db == "" {
-			if file == "" {
+		if s.dbAddress == "" {
+			if s.file == "" {
 				s.urls[link.Key] = link.Link
 				wg.Done()
 				return nil
 			}
 
-			recorder, err := NewRecorder(file)
+			recorder, err := NewRecorder(s.file)
 			if err != nil {
 				return err
 			}
@@ -65,6 +66,7 @@ func (s *storage) AddLinkToDB(link *Link) error {
 		}
 
 		if err = AddURLToTable(&Link{Key: link.Key, Link: link.Link}); err != nil {
+			wg.Done()
 			return err
 		}
 
@@ -85,11 +87,8 @@ func (s *storage) AddLinkToDB(link *Link) error {
 func (s *storage) GetKeyByLink(link string) string {
 	var foundKey string
 
-	db := viper.GetString("DATABASE_DSN")
-	file := viper.GetString("FILE_STORAGE_PATH")
-
-	if db == "" {
-		if file == "" {
+	if s.dbAddress == "" {
+		if s.file == "" {
 			for key, value := range s.urls {
 				fmt.Println("v:", value)
 				if value == link {
@@ -100,7 +99,7 @@ func (s *storage) GetKeyByLink(link string) string {
 			return foundKey
 		}
 
-		reader, err := NewReader(file)
+		reader, err := NewReader(s.file)
 		if err != nil {
 			log.Panic(err)
 		}
@@ -134,18 +133,15 @@ func (s *storage) GetKeyByLink(link string) string {
 func (s *storage) GetLinkByKey(linkKey string) string {
 	var foundLink string
 
-	db := viper.GetString("DATABASE_DSN")
-	file := viper.GetString("FILE_STORAGE_PATH")
-
-	if db == "" {
-		if file == "" {
+	if s.dbAddress == "" {
+		if s.file == "" {
 			if val, found := s.urls[linkKey]; found {
 				foundLink = val
 			}
 			return foundLink
 		}
 
-		reader, err := NewReader(file)
+		reader, err := NewReader(s.file)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -176,20 +172,17 @@ func (s *storage) GetLinkByKey(linkKey string) string {
 }
 
 func (s *storage) GetAllUrls() ([]Link, error) {
-	db := viper.GetString("DATABASE_DSN")
-	file := viper.GetString("FILE_STORAGE_PATH")
-
 	var response []Link
 
-	if db == "" {
-		if file == "" {
+	if s.dbAddress == "" {
+		if s.file == "" {
 			for key, value := range s.urls {
 				response = append(response, Link{key, value})
 			}
 			return response, nil
 		}
 
-		reader, err := NewReader(file)
+		reader, err := NewReader(s.file)
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -55,7 +55,6 @@ func AddURLToTable(link *Link) error {
 	}
 
 	return tx.Commit()
-
 }
 
 func FindValueInDB(value string) (Link, error) {

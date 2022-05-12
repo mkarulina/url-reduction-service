@@ -1,155 +1,122 @@
 package storage
 
 import (
+	"github.com/mkarulina/url-reduction-service/config"
 	"github.com/stretchr/testify/require"
-	"sync"
+	"log"
+	"os"
 	"testing"
 )
 
 func Test_storage_GetAllUrls(t *testing.T) {
-	type fields struct {
-		mu   sync.Mutex
-		urls map[string]string
+	_, err := config.LoadConfig("../../config")
+	if err != nil {
+		log.Fatal(err)
 	}
-	tests := []struct {
-		name    string
-		fields  fields
-		want    []Link
-		wantErr bool
-	}{
-		{
-			name: "ok",
-			fields: fields{
-				mu: sync.Mutex{},
-				urls: map[string]string{
-					"key1": "http://ya.ru/1",
-					"key2": "http://ya.ru/2",
-					"key3": "http://ya.ru/3",
-				},
-			},
-			want: []Link{
-				{Key: "key1", Link: "http://ya.ru/1"},
-				{Key: "key2", Link: "http://ya.ru/2"},
-				{Key: "key3", Link: "http://ya.ru/3"},
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &storage{
-				mu:   tt.fields.mu,
-				urls: tt.fields.urls,
-			}
-			got, err := s.GetAllUrls()
-			require.NoError(t, err)
-			require.Equal(t, len(got), len(tt.want))
+	os.Setenv("FILE_STORAGE_PATH", "../../tmp/test_urls.log")
+	defer os.Remove("../../tmp/test_urls.log")
 
-			for i := 0; i < len(tt.want); i++ {
-				require.Contains(t, got, tt.want[i])
-			}
-		})
+	stg := New()
+
+	urls := []Link{
+		{Key: "testKey11", Link: "http://testhost.ru/11"},
+		{Key: "testKey12", Link: "http://testhost.ru/12"},
+		{Key: "testKey13", Link: "http://testhost.ru/13"},
+	}
+
+	for i := 0; i < len(urls); i++ {
+		err = stg.AddLinkToDB(&Link{Key: urls[i].Key, Link: urls[i].Link})
+		if err != nil {
+			log.Println("can't add link to db", err)
+		}
+	}
+
+	got, err := stg.GetAllUrls()
+	require.NoError(t, err)
+	require.Equal(t, len(got), len(urls))
+
+	for i := 0; i < len(urls); i++ {
+		require.Contains(t, got, urls[i])
 	}
 }
 
 func Test_storage_GetKeyByLink(t *testing.T) {
-	type fields struct {
-		mu   sync.Mutex
-		urls map[string]string
+	_, err := config.LoadConfig("../../config")
+	if err != nil {
+		log.Fatal(err)
 	}
+	os.Setenv("FILE_STORAGE_PATH", "../../tmp/test_urls.log")
+	defer os.Remove("../../tmp/test_urls.log")
+
+	stg := New()
+
 	tests := []struct {
-		name   string
-		fields fields
-		link   string
-		want   string
+		name string
+		link string
+		key  string
 	}{
 		{
 			name: "ok",
-			fields: fields{
-				mu: sync.Mutex{},
-				urls: map[string]string{
-					"key1": "http://ya.ru/1",
-					"key2": "http://ya.ru/2",
-					"key3": "http://ya.ru/3",
-				},
-			},
 			link: "http://ya.ru/2",
-			want: "key2",
+			key:  "key2",
 		},
 		{
 			name: "not existent link",
-			fields: fields{
-				mu: sync.Mutex{},
-				urls: map[string]string{
-					"key1": "http://ya.ru/1",
-					"key2": "http://ya.ru/2",
-					"key3": "http://ya.ru/3",
-				},
-			},
 			link: "http://notExistent.ru",
-			want: "",
+			key:  "",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &storage{
-				mu:   tt.fields.mu,
-				urls: tt.fields.urls,
+
+			err = stg.AddLinkToDB(&Link{Key: tt.key, Link: tt.link})
+			if err != nil {
+				log.Println("can't add link to db", err)
 			}
-			if got := s.GetKeyByLink(tt.link); got != tt.want {
-				t.Errorf("GetKeyByLink() = %v, want %v", got, tt.want)
+
+			if got := stg.GetKeyByLink(tt.link); got != tt.key {
+				t.Errorf("GetKeyByLink() = %v, want %v", got, tt.key)
 			}
 		})
 	}
 }
 
 func Test_storage_GetLinkByKey(t *testing.T) {
-	type fields struct {
-		mu   sync.Mutex
-		urls map[string]string
+	_, err := config.LoadConfig("../../config")
+	if err != nil {
+		log.Fatal(err)
 	}
+	os.Setenv("FILE_STORAGE_PATH", "../../tmp/test_urls.log")
+	defer os.Remove("../../tmp/test_urls.log")
+
+	stg := New()
 
 	tests := []struct {
-		name   string
-		fields fields
-		key    string
-		want   string
+		name string
+		key  string
+		link string
 	}{
 		{
 			name: "ok",
-			fields: fields{
-				mu: sync.Mutex{},
-				urls: map[string]string{
-					"key1": "http://ya.ru/1",
-					"key2": "http://ya.ru/2",
-					"key3": "http://ya.ru/3",
-				},
-			},
-			key:  "key3",
-			want: "http://ya.ru/3",
+			key:  "http://ya.ru/2",
+			link: "key2",
 		},
 		{
-			name: "not existent key",
-			fields: fields{
-				mu: sync.Mutex{},
-				urls: map[string]string{
-					"key1": "http://ya.ru/4",
-					"key2": "http://ya.ru/5",
-					"key3": "http://ya.ru/6",
-				},
-			},
-			key:  "notExistent",
-			want: "",
+			name: "not existent link",
+			key:  "http://notExistent.ru",
+			link: "",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &storage{
-				mu:   tt.fields.mu,
-				urls: tt.fields.urls,
+
+			err = stg.AddLinkToDB(&Link{Key: tt.key, Link: tt.link})
+			if err != nil {
+				log.Println("can't add link to db", err)
 			}
-			if got := s.GetLinkByKey(tt.key); got != tt.want {
-				t.Errorf("GetLinkByKey() = %v, want %v", got, tt.want)
+
+			if got := stg.GetLinkByKey(tt.key); got != tt.link {
+				t.Errorf("GetLinkByKey() = %v, want %v", got, tt.link)
 			}
 		})
 	}

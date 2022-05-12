@@ -13,7 +13,8 @@ import (
 func PostLinkHandler(w http.ResponseWriter, r *http.Request) {
 	var reader io.Reader
 
-	//if err := helpers.SetCookie(w, r); err != nil {
+	//e := encryptor.New()
+	//if err := e.SetCookie(w, r); err != nil {
 	//	http.Error(w, err.Error(), http.StatusInternalServerError)
 	//	return
 	//}

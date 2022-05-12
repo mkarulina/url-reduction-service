@@ -30,7 +30,7 @@ func LoadConfig(path string) (config *Config, err error) {
 	flag.StringVar(&conf.serverAddress, "a", ":8080", "port to listen on")
 	flag.StringVar(&conf.baseURL, "b", "http://localhost:8080/", "base short url")
 	flag.StringVar(&conf.filePath, "f", "../urls.log", "file path for url saving")
-	flag.StringVar(&conf.dbAddress, "d", "", "data base address")
+	flag.StringVar(&conf.dbAddress, "d", "postgresql://localhost:5432/postgres", "data base address")
 
 	flag.Parse()
 

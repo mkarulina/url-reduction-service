@@ -16,6 +16,7 @@ func PingHandler(w http.ResponseWriter, r *http.Request) {
 	db, err := sql.Open("pgx", dbAddress)
 	if err != nil {
 		log.Fatal(err)
+		return
 	}
 	defer db.Close()
 
