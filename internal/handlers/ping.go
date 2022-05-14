@@ -1,4 +1,4 @@
-package ping
+package handlers
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func PingHandler(w http.ResponseWriter, r *http.Request) {
+func (h *handler) PingHandler(w http.ResponseWriter, r *http.Request) {
 	dbAddress := viper.GetString("DATABASE_DSN")
 
 	db, err := sql.Open("pgx", dbAddress)

@@ -1,40 +1,23 @@
-package postlink
+package handlers
 
 import (
-	"compress/gzip"
 	"github.com/asaskevich/govalidator"
 	"github.com/jackc/pgerrcode"
-	"github.com/mkarulina/url-reduction-service/internal/helpers"
 	"io"
 	"log"
 	"net/http"
 )
 
-func PostLinkHandler(w http.ResponseWriter, r *http.Request) {
-	var reader io.Reader
-
-	//e := encryptor.New()
-	//if err := e.SetCookie(w, r); err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-
-	if r.Header.Get(`Content-Encoding`) == `gzip` {
-		gz, err := gzip.NewReader(r.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		reader = gz
-		defer gz.Close()
-	} else {
-		reader = r.Body
-	}
-
-	body, err := io.ReadAll(reader)
+func (h *handler) PostLinkHandler(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Println("can't read body", err)
 		return
+	}
+
+	cookie, err := r.Cookie("session_token")
+	if err != nil || cookie == nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 
 	reqValue := string(body)
@@ -45,7 +28,7 @@ func PostLinkHandler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Проверьте формат url в теле запроса"))
 		return
 	} else {
-		generatedLink, err := helpers.ShortenLink(reqValue)
+		generatedLink, err := h.stg.ShortenLink(cookie.Value, reqValue)
 		if err != nil {
 			if code := err.Error(); code == pgerrcode.UniqueViolation {
 				w.WriteHeader(http.StatusConflict)

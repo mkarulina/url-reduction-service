@@ -20,7 +20,7 @@ func TestLoadConfig(t *testing.T) {
 				serverAddress: ":8080",
 				baseURL:       "http://localhost:8080/",
 				filePath:      "../urls.log",
-				dbAddress:     "",
+				dbAddress:     "postgresql://localhost:5432/postgres",
 			},
 			wantErr: false,
 		},

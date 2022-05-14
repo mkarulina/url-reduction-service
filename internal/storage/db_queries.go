@@ -20,16 +20,13 @@ func AddURLToTable(link *Link) error {
 	}
 	defer db.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	_, err = db.ExecContext(
-		ctx,
-		"CREATE TABLE IF NOT EXISTS urls (key varchar(255) UNIQUE, link varchar(255) UNIQUE)",
-	)
+	err = CreateTable(db)
 	if err != nil {
 		return err
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	tx, err := db.Begin()
 	if err != nil {
@@ -39,14 +36,14 @@ func AddURLToTable(link *Link) error {
 
 	insert, err := tx.PrepareContext(
 		ctx,
-		"INSERT INTO urls (key, link) VALUES ($1, $2) ON CONFLICT (link) DO NOTHING",
+		"INSERT INTO urls (user_id, key, link) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
 	)
 	if err != nil {
 		return err
 	}
 	defer insert.Close()
 
-	result, err := insert.ExecContext(ctx, link.Key, link.Link)
+	result, err := insert.ExecContext(ctx, link.UserID, link.Key, link.Link)
 	if err != nil {
 		return err
 	}
@@ -71,7 +68,7 @@ func FindValueInDB(value string) (Link, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	row := db.QueryRowContext(ctx, "SELECT * FROM urls WHERE link = $1 or key = $1", value)
+	row := db.QueryRowContext(ctx, "SELECT key, link FROM urls WHERE link = $1 or key = $1", value)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -86,7 +83,7 @@ func FindValueInDB(value string) (Link, error) {
 	return foundLink, nil
 }
 
-func GetAllRows() ([]Link, error) {
+func GetAllRowsByUserID(userID string) ([]Link, error) {
 	var links []Link
 
 	dbAddress := viper.GetString("DATABASE_DSN")
@@ -100,7 +97,7 @@ func GetAllRows() ([]Link, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	rows, err := db.QueryContext(ctx, "SELECT * FROM urls")
+	rows, err := db.QueryContext(ctx, "SELECT key, link FROM urls WHERE user_id = $1", userID)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -120,4 +117,19 @@ func GetAllRows() ([]Link, error) {
 	}
 
 	return links, nil
+}
+
+func CreateTable(db *sql.DB) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := db.ExecContext(
+		ctx,
+		"CREATE TABLE IF NOT EXISTS urls (user_id varchar(255), key varchar(255), link varchar(255), CONSTRAINT uniq_person_link UNIQUE (user_id, key, link))",
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

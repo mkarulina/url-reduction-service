@@ -1,17 +1,15 @@
-package shorten
+package handlers
 
 import (
-	"compress/gzip"
 	"encoding/json"
 	"github.com/asaskevich/govalidator"
 	"github.com/jackc/pgerrcode"
-	"github.com/mkarulina/url-reduction-service/internal/helpers"
 	"io"
 	"log"
 	"net/http"
 )
 
-func ShortenHandler(w http.ResponseWriter, r *http.Request) {
+func (h *handler) ShortenHandler(w http.ResponseWriter, r *http.Request) {
 	type receivedURL struct {
 		URL string `json:"url"`
 	}
@@ -22,29 +20,12 @@ func ShortenHandler(w http.ResponseWriter, r *http.Request) {
 		Error string `json:"error"`
 	}
 
-	var reader io.Reader
-
-	//e := encryptor.New()
-	//if err := e.SetCookie(w, r); err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
-
-	if r.Header.Get(`Content-Encoding`) == `gzip` {
-		gz, err := gzip.NewReader(r.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		reader = gz
-		defer gz.Close()
-	} else {
-		reader = r.Body
+	cookie, err := r.Cookie("session_token")
+	if err != nil {
+		log.Println(err)
 	}
 
-	reader = r.Body
-
-	body, err := io.ReadAll(reader)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Println("can't read body", err)
 		return
@@ -69,7 +50,7 @@ func ShortenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	link, err := helpers.ShortenLink(reqValue)
+	link, err := h.stg.ShortenLink(cookie.Value, reqValue)
 	if err != nil {
 		if code := err.Error(); code == pgerrcode.UniqueViolation {
 			w.Header().Set("Content-Type", "application/json")

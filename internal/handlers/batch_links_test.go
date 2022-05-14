@@ -1,8 +1,9 @@
-package batch
+package handlers
 
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/mkarulina/url-reduction-service/internal/storage"
 	"github.com/stretchr/testify/require"
 	"io"
 	"log"
@@ -16,6 +17,8 @@ func TestBatchLinksHandler(t *testing.T) {
 		ID          string `json:"correlation_id"`
 		OriginalURL string `json:"original_url"`
 	}
+
+	h := NewHandler(storage.New())
 
 	reqBody := []receivedURL{
 		{ID: "111", OriginalURL: "ya111.ru"},
@@ -33,8 +36,12 @@ func TestBatchLinksHandler(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/api/user/urls", r)
 	rec := httptest.NewRecorder()
+	req.AddCookie(&http.Cookie{
+		Name:  "session_token",
+		Value: "testCookie",
+	})
 
-	handler := http.HandlerFunc(BatchLinksHandler)
+	handler := http.HandlerFunc(h.BatchLinksHandler)
 
 	handler.ServeHTTP(rec, req)
 	result := rec.Result()

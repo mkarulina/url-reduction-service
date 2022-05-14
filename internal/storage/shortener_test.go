@@ -1,8 +1,7 @@
-package helpers
+package storage
 
 import (
 	"github.com/mkarulina/url-reduction-service/config"
-	"github.com/mkarulina/url-reduction-service/internal/storage"
 	"github.com/stretchr/testify/require"
 	"log"
 	"os"
@@ -17,7 +16,7 @@ func TestShortenLink(t *testing.T) {
 	os.Setenv("FILE_STORAGE_PATH", "../../tmp/test_urls.log")
 	defer os.Remove("../../tmp/test_urls.log")
 
-	storage.New()
+	stg := New()
 
 	tests := []struct {
 		name string
@@ -42,7 +41,7 @@ func TestShortenLink(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			key, _ := ShortenLink(test.link)
+			key, _ := stg.ShortenLink("testID", test.link)
 			require.NotEmptyf(t, key, "key not generated", test.link)
 		})
 	}

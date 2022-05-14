@@ -1,6 +1,7 @@
-package ping
+package handlers
 
 import (
+	"github.com/mkarulina/url-reduction-service/internal/storage"
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
@@ -11,10 +12,12 @@ import (
 func TestPingHandler_Error(t *testing.T) {
 	os.Setenv("DATABASE_DSN", "")
 
+	h := NewHandler(storage.New())
+
 	req := httptest.NewRequest(http.MethodGet, "/ping", nil)
 	rec := httptest.NewRecorder()
 
-	handler := http.HandlerFunc(PingHandler)
+	handler := http.HandlerFunc(h.PingHandler)
 	handler.ServeHTTP(rec, req)
 	result := rec.Result()
 

@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"fmt"
 	"github.com/spf13/viper"
 	"io"
 	"log"
@@ -9,30 +8,37 @@ import (
 )
 
 type Storage interface {
+	ShortenLink(userID string, link string) (string, error)
 	AddLinkToDB(link *Link) error
 	GetLinkByKey(linkKey string) string
 	GetKeyByLink(link string) string
-	GetAllUrls() ([]Link, error)
+	GetAllUrlsByUserID(userID string) ([]ResponseLink, error)
 }
 
 type storage struct {
-	mu        sync.Mutex
-	urls      map[string]string
+	mu        sync.RWMutex
 	file      string
 	dbAddress string
+	urls      []Link
 }
 
 type Link struct {
+	UserID string `json:"user_id"`
+	Key    string `json:"key"`
+	Link   string `json:"link"`
+}
+
+type ResponseLink struct {
 	Key  string `json:"short_url"`
 	Link string `json:"original_url"`
 }
 
 func New() Storage {
 	s := &storage{
-		mu:        sync.Mutex{},
-		urls:      map[string]string{},
+		mu:        sync.RWMutex{},
 		file:      viper.GetString("FILE_STORAGE_PATH"),
 		dbAddress: viper.GetString("DATABASE_DSN"),
+		urls:      []Link{},
 	}
 	return s
 }
@@ -47,7 +53,7 @@ func (s *storage) AddLinkToDB(link *Link) error {
 
 		if s.dbAddress == "" {
 			if s.file == "" {
-				s.urls[link.Key] = link.Link
+				s.urls = append(s.urls, Link{link.UserID, link.Key, link.Link})
 				wg.Done()
 				return nil
 			}
@@ -65,7 +71,7 @@ func (s *storage) AddLinkToDB(link *Link) error {
 			return nil
 		}
 
-		if err = AddURLToTable(&Link{Key: link.Key, Link: link.Link}); err != nil {
+		if err = AddURLToTable(&Link{link.UserID, link.Key, link.Link}); err != nil {
 			wg.Done()
 			return err
 		}
@@ -89,11 +95,9 @@ func (s *storage) GetKeyByLink(link string) string {
 
 	if s.dbAddress == "" {
 		if s.file == "" {
-			for key, value := range s.urls {
-				fmt.Println("v:", value)
-				if value == link {
-					foundKey = key
-					break
+			for _, v := range s.urls {
+				if v.Link == link {
+					return v.Key
 				}
 			}
 			return foundKey
@@ -135,8 +139,10 @@ func (s *storage) GetLinkByKey(linkKey string) string {
 
 	if s.dbAddress == "" {
 		if s.file == "" {
-			if val, found := s.urls[linkKey]; found {
-				foundLink = val
+			for _, v := range s.urls {
+				if v.Key == linkKey {
+					return v.Link
+				}
 			}
 			return foundLink
 		}
@@ -171,13 +177,17 @@ func (s *storage) GetLinkByKey(linkKey string) string {
 	return foundLink
 }
 
-func (s *storage) GetAllUrls() ([]Link, error) {
-	var response []Link
+func (s *storage) GetAllUrlsByUserID(userID string) ([]ResponseLink, error) {
+	var response []ResponseLink
+
+	baseURL := viper.GetString("BASE_URL")
 
 	if s.dbAddress == "" {
 		if s.file == "" {
-			for key, value := range s.urls {
-				response = append(response, Link{key, value})
+			for _, v := range s.urls {
+				if v.UserID == userID {
+					response = append(response, ResponseLink{Key: baseURL + "/" + v.Key, Link: v.Link})
+				}
 			}
 			return response, nil
 		}
@@ -196,14 +206,20 @@ func (s *storage) GetAllUrls() ([]Link, error) {
 			if err != nil && err != io.EOF {
 				log.Fatal(err)
 			}
-			response = append(response, Link{readLine.Key, readLine.Link})
+			if readLine.UserID == userID {
+				response = append(response, ResponseLink{baseURL + "/" + readLine.Key, readLine.Link})
+			}
 		}
 		return response, nil
 	}
 
-	response, err := GetAllRows()
+	resp, err := GetAllRowsByUserID(userID)
 	if err != nil {
 		return nil, err
+	}
+
+	for _, v := range resp {
+		response = append(response, ResponseLink{baseURL + "/" + v.Key, v.Link})
 	}
 
 	return response, nil

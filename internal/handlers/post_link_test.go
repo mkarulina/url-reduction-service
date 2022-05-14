@@ -1,4 +1,4 @@
-package postlink
+package handlers
 
 import (
 	"bytes"
@@ -16,14 +16,14 @@ import (
 )
 
 func TestPostLinkHandler(t *testing.T) {
-	_, err := config.LoadConfig("../../../config")
+	_, err := config.LoadConfig("../../config")
 	if err != nil {
 		log.Fatal(err)
 	}
-	os.Setenv("FILE_STORAGE_PATH", "../../../tmp/test_urls.log")
-	defer os.Remove("../../../tmp/test_urls.log")
+	os.Setenv("FILE_STORAGE_PATH", "../../tmp/test_urls.log")
+	defer os.Remove("../../tmp/test_urls.log")
 
-	storage.New()
+	h := NewHandler(storage.New())
 
 	baseURL := viper.GetString("BASE_URL")
 
@@ -61,7 +61,12 @@ func TestPostLinkHandler(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, test.url, bytes.NewBufferString(test.body))
 			rec := httptest.NewRecorder()
-			handler := http.HandlerFunc(PostLinkHandler)
+			req.AddCookie(&http.Cookie{
+				Name:  "session_token",
+				Value: "testCookie",
+			})
+
+			handler := http.HandlerFunc(h.PostLinkHandler)
 			handler.ServeHTTP(rec, req)
 			result := rec.Result()
 
