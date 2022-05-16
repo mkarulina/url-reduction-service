@@ -3,18 +3,19 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/mkarulina/url-reduction-service/config"
+	"github.com/mkarulina/url-reduction-service/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 )
 
 func TestShortenHandler(t *testing.T) {
-	c := NewContainer()
-
 	type requestBody struct {
 		URL string `json:"url"`
 	}
@@ -27,6 +28,16 @@ func TestShortenHandler(t *testing.T) {
 		key        string
 		wantError  bool
 	}
+	_, err := config.LoadConfig("../../config")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	os.Setenv("FILE_STORAGE_PATH", "../../tmp/test_urls.log")
+	defer os.Remove("../../tmp/test_urls.log")
+
+	h := NewHandler(storage.New())
+
 	tests := []struct {
 		name string
 		url  string
@@ -65,7 +76,12 @@ func TestShortenHandler(t *testing.T) {
 
 			req := httptest.NewRequest(http.MethodPost, test.url, bytes.NewReader(marshalBody))
 			rec := httptest.NewRecorder()
-			handler := http.HandlerFunc(c.ShortenHandler)
+			req.AddCookie(&http.Cookie{
+				Name:  "session_token",
+				Value: "testCookie",
+			})
+
+			handler := http.HandlerFunc(h.ShortenHandler)
 			handler.ServeHTTP(rec, req)
 			result := rec.Result()
 

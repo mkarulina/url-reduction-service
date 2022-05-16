@@ -1,15 +1,15 @@
 package handlers
 
 import (
-	"compress/gzip"
 	"encoding/json"
 	"github.com/asaskevich/govalidator"
+	"github.com/jackc/pgerrcode"
 	"io"
 	"log"
 	"net/http"
 )
 
-func (c *Container) ShortenHandler(w http.ResponseWriter, r *http.Request) {
+func (h *handler) ShortenHandler(w http.ResponseWriter, r *http.Request) {
 	type receivedURL struct {
 		URL string `json:"url"`
 	}
@@ -20,21 +20,12 @@ func (c *Container) ShortenHandler(w http.ResponseWriter, r *http.Request) {
 		Error string `json:"error"`
 	}
 
-	var reader io.Reader
-
-	if r.Header.Get(`Content-Encoding`) == `gzip` {
-		gz, err := gzip.NewReader(r.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		reader = gz
-		defer gz.Close()
-	} else {
-		reader = r.Body
+	cookie, err := r.Cookie("session_token")
+	if err != nil {
+		log.Println(err)
 	}
 
-	body, err := io.ReadAll(reader)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		log.Println("can't read body", err)
 		return
@@ -57,15 +48,25 @@ func (c *Container) ShortenHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write(errText)
 		return
-	} else {
-		generatedLink := sentURL{c.ShortenLink(reqValue)}
-		marshalResult, err := json.Marshal(generatedLink)
-		if err != nil {
-			log.Println("can't marshal response", err)
-			return
+	}
+
+	link, err := h.stg.ShortenLink(cookie.Value, reqValue)
+	if err != nil {
+		if code := err.Error(); code == pgerrcode.UniqueViolation {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusConflict)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		w.Write(marshalResult)
+		w.WriteHeader(http.StatusInternalServerError)
 	}
+
+	generatedLink := sentURL{link}
+	marshalResult, err := json.Marshal(generatedLink)
+	if err != nil {
+		log.Println("can't marshal response", err)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	w.Write(marshalResult)
 }
