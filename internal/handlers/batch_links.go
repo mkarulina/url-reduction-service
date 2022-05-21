@@ -47,15 +47,14 @@ func (h *handler) BatchLinksHandler(w http.ResponseWriter, r *http.Request) {
 		if !validURL {
 			log.Println("invalid link: ", v)
 			continue
-		} else {
-			link, err := h.stg.ShortenLink(cookie.Value, reqValue)
-			if err != nil {
-				if code := err.Error(); code != pgerrcode.UniqueViolation {
-					log.Panic(err)
-				}
-			}
-			resp = append(resp, sentURL{v.ID, link})
 		}
+		link, err := h.stg.ShortenLink(cookie.Value, reqValue)
+		if err != nil {
+			if code := err.Error(); code != pgerrcode.UniqueViolation {
+				log.Panic(err)
+			}
+		}
+		resp = append(resp, sentURL{v.ID, link})
 	}
 
 	marshalResult, err := json.Marshal(resp)

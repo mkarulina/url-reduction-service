@@ -12,6 +12,7 @@ type Handler interface {
 	PingHandler(w http.ResponseWriter, r *http.Request)
 	PostLinkHandler(w http.ResponseWriter, r *http.Request)
 	ShortenHandler(w http.ResponseWriter, r *http.Request)
+	DeleteUserUrls(w http.ResponseWriter, r *http.Request)
 }
 
 type handler struct {

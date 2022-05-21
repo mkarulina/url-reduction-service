@@ -122,7 +122,7 @@ func Test_storage_GetLinkByKey(t *testing.T) {
 				log.Println("can't add link to db", err)
 			}
 
-			if got := stg.GetLinkByKey(tt.key); got != tt.link {
+			if got := stg.GetLinkByKey(tt.key); got.Link != tt.link {
 				t.Errorf("GetLinkByKey() = %v, want %v", got, tt.link)
 			}
 		})

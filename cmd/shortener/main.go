@@ -43,6 +43,7 @@ func main() {
 		r.Post("/", h.PostLinkHandler)
 		r.Post("/api/shorten", h.ShortenHandler)
 		r.Post("/api/shorten/batch", h.BatchLinksHandler)
+		r.Delete("/api/user/urls", h.DeleteUserUrls)
 	})
 
 	address := viper.GetString("SERVER_ADDRESS")

@@ -48,6 +48,24 @@ func (mr *MockStorageMockRecorder) AddLinkToDB(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddLinkToDB", reflect.TypeOf((*MockStorage)(nil).AddLinkToDB), arg0)
 }
 
+// DeleteUrls mocks base method.
+func (m *MockStorage) DeleteUrls(arg0 ...chan storage.UserKeys) error {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "DeleteUrls", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteUrls indicates an expected call of DeleteUrls.
+func (mr *MockStorageMockRecorder) DeleteUrls(arg0 ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteUrls", reflect.TypeOf((*MockStorage)(nil).DeleteUrls), arg0...)
+}
+
 // GetAllUrlsByUserID mocks base method.
 func (m *MockStorage) GetAllUrlsByUserID(arg0 string) ([]storage.ResponseLink, error) {
 	m.ctrl.T.Helper()
@@ -78,10 +96,10 @@ func (mr *MockStorageMockRecorder) GetKeyByLink(arg0 interface{}) *gomock.Call {
 }
 
 // GetLinkByKey mocks base method.
-func (m *MockStorage) GetLinkByKey(arg0 string) string {
+func (m *MockStorage) GetLinkByKey(arg0 string) *storage.Link {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetLinkByKey", arg0)
-	ret0, _ := ret[0].(string)
+	ret0, _ := ret[0].(*storage.Link)
 	return ret0
 }
 
