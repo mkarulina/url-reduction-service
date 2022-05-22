@@ -27,18 +27,17 @@ func (h *handler) PostLinkHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Проверьте формат url в теле запроса"))
 		return
-	} else {
-		generatedLink, err := h.stg.ShortenLink(cookie.Value, reqValue)
-		if err != nil {
-			if code := err.Error(); code == pgerrcode.UniqueViolation {
-				w.WriteHeader(http.StatusConflict)
-				w.Write([]byte(generatedLink))
-				return
-			}
-			w.Write([]byte(err.Error()))
+	}
+	generatedLink, err := h.stg.ShortenLink(cookie.Value, reqValue)
+	if err != nil {
+		if code := err.Error(); code == pgerrcode.UniqueViolation {
+			w.WriteHeader(http.StatusConflict)
+			w.Write([]byte(generatedLink))
 			return
 		}
-		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte(generatedLink))
+		w.Write([]byte(err.Error()))
+		return
 	}
+	w.WriteHeader(http.StatusCreated)
+	w.Write([]byte(generatedLink))
 }

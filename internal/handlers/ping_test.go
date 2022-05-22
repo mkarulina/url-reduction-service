@@ -5,13 +5,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 )
 
 func TestPingHandler_Error(t *testing.T) {
-	os.Setenv("DATABASE_DSN", "")
-
 	h := NewHandler(storage.New())
 
 	req := httptest.NewRequest(http.MethodGet, "/ping", nil)

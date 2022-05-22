@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"github.com/golang/mock/gomock"
-	"github.com/mkarulina/url-reduction-service/config"
 	"github.com/mkarulina/url-reduction-service/internal/mocks"
 	"github.com/mkarulina/url-reduction-service/internal/storage"
 	"github.com/stretchr/testify/require"
@@ -11,18 +10,10 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 )
 
 func TestGetAllUrlsHandler(t *testing.T) {
-	_, err := config.LoadConfig("../../config")
-	if err != nil {
-		log.Fatal(err)
-	}
-	os.Setenv("FILE_STORAGE_PATH", "../../tmp/test_urls.log")
-	defer os.Remove("../../tmp/test_urls.log")
-
 	urls := []storage.ResponseLink{
 		{Key: "testKey11", Link: "http://testhost.ru/11"},
 		{Key: "testKey12", Link: "http://testhost.ru/12"},

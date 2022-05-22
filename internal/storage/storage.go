@@ -10,9 +10,10 @@ import (
 type Storage interface {
 	ShortenLink(userID string, link string) (string, error)
 	AddLinkToDB(link *Link) error
-	GetLinkByKey(linkKey string) string
+	GetLinkByKey(linkKey string) *Link
 	GetKeyByLink(link string) string
 	GetAllUrlsByUserID(userID string) ([]ResponseLink, error)
+	DeleteUrls(inputChs ...chan UserKeys) error
 }
 
 type storage struct {
@@ -23,14 +24,20 @@ type storage struct {
 }
 
 type Link struct {
-	UserID string `json:"user_id"`
-	Key    string `json:"key"`
-	Link   string `json:"link"`
+	UserID    string `json:"user_id"`
+	Key       string `json:"key"`
+	Link      string `json:"link"`
+	IsDeleted bool   `json:"is_deleted"`
 }
 
 type ResponseLink struct {
 	Key  string `json:"short_url"`
 	Link string `json:"original_url"`
+}
+
+type UserKeys struct {
+	Cookie string
+	Keys   []string
 }
 
 func New() Storage {
@@ -45,49 +52,53 @@ func New() Storage {
 
 func (s *storage) AddLinkToDB(link *Link) error {
 	var wg sync.WaitGroup
-	var err error
+	var errToReturn error
 
-	doIncrement := func() error {
+	doIncrement := func() {
 		s.mu.Lock()
 		defer s.mu.Unlock()
+		defer wg.Done()
 
 		if s.dbAddress == "" {
 			if s.file == "" {
-				s.urls = append(s.urls, Link{link.UserID, link.Key, link.Link})
-				wg.Done()
-				return nil
+				s.urls = append(s.urls, Link{
+					UserID:    link.UserID,
+					Key:       link.Key,
+					Link:      link.Link,
+					IsDeleted: link.IsDeleted,
+				})
+				return
 			}
 
 			recorder, err := NewRecorder(s.file)
 			if err != nil {
-				return err
+				errToReturn = err
+				return
 			}
 			defer recorder.Close()
 
 			if err = recorder.WriteLink(link); err != nil {
-				return err
+				errToReturn = err
+				return
 			}
-			wg.Done()
-			return nil
+			return
 		}
 
-		if err = AddURLToTable(&Link{link.UserID, link.Key, link.Link}); err != nil {
-			wg.Done()
-			return err
+		if err := AddURLToTable(&Link{
+			UserID: link.UserID,
+			Key:    link.Key,
+			Link:   link.Link,
+		}); err != nil {
+			errToReturn = err
+			return
 		}
-
-		wg.Done()
-		return nil
 	}
 
 	wg.Add(1)
 	go doIncrement()
 	wg.Wait()
 
-	if err != nil {
-		return err
-	}
-	return nil
+	return errToReturn
 }
 
 func (s *storage) GetKeyByLink(link string) string {
@@ -130,21 +141,20 @@ func (s *storage) GetKeyByLink(link string) string {
 	if err != nil {
 		log.Panic(err)
 	}
+
 	foundKey = sqlResp.Key
 	return foundKey
 }
 
-func (s *storage) GetLinkByKey(linkKey string) string {
-	var foundLink string
-
+func (s *storage) GetLinkByKey(linkKey string) *Link {
 	if s.dbAddress == "" {
 		if s.file == "" {
 			for _, v := range s.urls {
 				if v.Key == linkKey {
-					return v.Link
+					return &v
 				}
 			}
-			return foundLink
+			return nil
 		}
 
 		reader, err := NewReader(s.file)
@@ -162,19 +172,16 @@ func (s *storage) GetLinkByKey(linkKey string) string {
 				log.Fatal(err)
 			}
 			if readLine.Key == linkKey {
-				foundLink = readLine.Link
-				break
+				return readLine
 			}
 		}
-		return foundLink
 	}
 
 	sqlResp, err := FindValueInDB(linkKey)
 	if err != nil {
 		log.Panic(err)
 	}
-	foundLink = sqlResp.Link
-	return foundLink
+	return &sqlResp
 }
 
 func (s *storage) GetAllUrlsByUserID(userID string) ([]ResponseLink, error) {
@@ -185,7 +192,7 @@ func (s *storage) GetAllUrlsByUserID(userID string) ([]ResponseLink, error) {
 	if s.dbAddress == "" {
 		if s.file == "" {
 			for _, v := range s.urls {
-				if v.UserID == userID {
+				if v.UserID == userID && !v.IsDeleted {
 					response = append(response, ResponseLink{Key: baseURL + "/" + v.Key, Link: v.Link})
 				}
 			}
@@ -206,7 +213,7 @@ func (s *storage) GetAllUrlsByUserID(userID string) ([]ResponseLink, error) {
 			if err != nil && err != io.EOF {
 				log.Fatal(err)
 			}
-			if readLine.UserID == userID {
+			if readLine.UserID == userID && !readLine.IsDeleted {
 				response = append(response, ResponseLink{baseURL + "/" + readLine.Key, readLine.Link})
 			}
 		}
@@ -223,4 +230,94 @@ func (s *storage) GetAllUrlsByUserID(userID string) ([]ResponseLink, error) {
 	}
 
 	return response, nil
+}
+
+func (s *storage) DeleteUrls(inputChs ...chan UserKeys) error {
+	var wg sync.WaitGroup
+	var errToReturn error
+
+	outCh := fanIn(inputChs...)
+
+	doIncrement := func(ch UserKeys) {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		defer wg.Done()
+
+		if s.dbAddress == "" {
+			if s.file == "" {
+				for _, key := range ch.Keys {
+					for i, v := range s.urls {
+						if v.Key == key && v.UserID == ch.Cookie {
+							s.urls[i].IsDeleted = true
+						}
+					}
+				}
+			}
+
+			reader, err := NewReader(s.file)
+			if err != nil {
+				errToReturn = err
+			}
+			defer reader.Close()
+
+			recorder, err := NewRecorder(s.file)
+			if err != nil {
+				errToReturn = err
+			}
+			defer recorder.Close()
+
+			for _, key := range ch.Keys {
+				readLine, err := reader.ReadLink()
+				if readLine == nil {
+					break
+				}
+				if err != nil && err != io.EOF {
+					log.Fatal(err)
+				}
+
+				if readLine.Key == key && readLine.UserID == ch.Cookie {
+					readLine.IsDeleted = true
+					if err = recorder.WriteLink(readLine); err != nil {
+						errToReturn = err
+					}
+				}
+			}
+		}
+
+		if err := SetIsDeletedFlag(ch.Cookie, ch.Keys); err != nil {
+			errToReturn = err
+		}
+	}
+
+	for ch := range outCh {
+		wg.Add(1)
+		go doIncrement(ch)
+		wg.Wait()
+	}
+
+	return errToReturn
+}
+
+func fanIn(inputChs ...chan UserKeys) chan UserKeys {
+	outCh := make(chan UserKeys)
+
+	go func() {
+		wg := &sync.WaitGroup{}
+
+		for _, ch := range inputChs {
+			wg.Add(1)
+
+			go func(ch chan UserKeys) {
+				defer wg.Done()
+				for i := range ch {
+					outCh <- i
+				}
+			}(ch)
+		}
+
+		wg.Wait()
+		close(outCh)
+	}()
+
+	return outCh
 }

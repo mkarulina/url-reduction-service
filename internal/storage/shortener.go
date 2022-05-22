@@ -15,7 +15,12 @@ func (s *storage) ShortenLink(userID string, link string) (string, error) {
 	encoder.Write([]byte(link))
 	key := buf.String()
 
-	err := s.AddLinkToDB(&Link{UserID: userID, Key: key, Link: link})
+	err := s.AddLinkToDB(&Link{
+		UserID:    userID,
+		Key:       key,
+		Link:      link,
+		IsDeleted: false,
+	})
 	if err != nil {
 		insertErr = err
 	}

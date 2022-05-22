@@ -2,30 +2,19 @@ package handlers
 
 import (
 	"bytes"
-	"github.com/mkarulina/url-reduction-service/config"
 	"github.com/mkarulina/url-reduction-service/internal/storage"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 )
 
 func TestPostLinkHandler(t *testing.T) {
-	_, err := config.LoadConfig("../../config")
-	if err != nil {
-		log.Fatal(err)
-	}
-	os.Setenv("FILE_STORAGE_PATH", "../../tmp/test_urls.log")
-	defer os.Remove("../../tmp/test_urls.log")
-
-	h := NewHandler(storage.New())
-
 	baseURL := viper.GetString("BASE_URL")
+	h := NewHandler(storage.New())
 
 	type want struct {
 		statusCode int

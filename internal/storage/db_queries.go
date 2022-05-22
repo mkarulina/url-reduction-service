@@ -11,6 +11,26 @@ import (
 	"time"
 )
 
+func CreateTable(db *sql.DB) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := db.ExecContext(
+		ctx,
+		"CREATE TABLE IF NOT EXISTS urls ("+
+			"user_id VARCHAR(255), "+
+			"key VARCHAR(255), "+
+			"link VARCHAR(255), "+
+			"is_deleted BOOLEAN DEFAULT false, "+
+			"CONSTRAINT uniq_person_link UNIQUE (user_id, key, link))",
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func AddURLToTable(link *Link) error {
 	dbAddress := viper.GetString("DATABASE_DSN")
 
@@ -68,13 +88,13 @@ func FindValueInDB(value string) (Link, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	row := db.QueryRowContext(ctx, "SELECT key, link FROM urls WHERE link = $1 or key = $1", value)
+	row := db.QueryRowContext(ctx, "SELECT key, link, is_deleted FROM urls WHERE link = $1 or key = $1", value)
 	if err != nil {
 		log.Panic(err)
 	}
 
 	if row != nil {
-		err = row.Scan(&foundLink.Key, &foundLink.Link)
+		err = row.Scan(&foundLink.Key, &foundLink.Link, &foundLink.IsDeleted)
 		if err != nil && err != sql.ErrNoRows {
 			log.Panic(err)
 		}
@@ -97,7 +117,7 @@ func GetAllRowsByUserID(userID string) ([]Link, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	rows, err := db.QueryContext(ctx, "SELECT key, link FROM urls WHERE user_id = $1", userID)
+	rows, err := db.QueryContext(ctx, "SELECT key, link FROM urls WHERE user_id = $1 AND is_deleted IS NOT true", userID)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -119,17 +139,37 @@ func GetAllRowsByUserID(userID string) ([]Link, error) {
 	return links, nil
 }
 
-func CreateTable(db *sql.DB) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+func SetIsDeletedFlag(userID string, keys []string) error {
+	dbAddress := viper.GetString("DATABASE_DSN")
+
+	db, err := sql.Open("pgx", dbAddress)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	_, err := db.ExecContext(
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	insert, err := tx.PrepareContext(
 		ctx,
-		"CREATE TABLE IF NOT EXISTS urls (user_id varchar(255), key varchar(255), link varchar(255), CONSTRAINT uniq_person_link UNIQUE (user_id, key, link))",
+		"UPDATE urls SET is_deleted = true WHERE user_id = $1 AND key = any($2)",
 	)
 	if err != nil {
 		return err
 	}
+	defer insert.Close()
 
-	return nil
+	_, err = insert.ExecContext(ctx, userID, keys)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
