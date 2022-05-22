@@ -1,21 +1,11 @@
 package storage
 
 import (
-	"github.com/mkarulina/url-reduction-service/config"
 	"github.com/stretchr/testify/require"
-	"log"
-	"os"
 	"testing"
 )
 
 func TestShortenLink(t *testing.T) {
-	_, err := config.LoadConfig("../../config")
-	if err != nil {
-		log.Fatal(err)
-	}
-	os.Setenv("FILE_STORAGE_PATH", "../../tmp/test_urls.log")
-	defer os.Remove("../../tmp/test_urls.log")
-
 	stg := New()
 
 	tests := []struct {

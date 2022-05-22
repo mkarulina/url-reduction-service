@@ -15,7 +15,7 @@ func (h *handler) GetLinkHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if foundLink.IsDeleted == true {
+	if foundLink.IsDeleted {
 		w.WriteHeader(http.StatusGone)
 		w.Write([]byte("Url has been deleted"))
 		return

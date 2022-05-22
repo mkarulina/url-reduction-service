@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/mkarulina/url-reduction-service/config"
 	"github.com/mkarulina/url-reduction-service/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -11,7 +10,6 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 )
 
@@ -28,13 +26,6 @@ func TestShortenHandler(t *testing.T) {
 		key        string
 		wantError  bool
 	}
-	_, err := config.LoadConfig("../../config")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	os.Setenv("FILE_STORAGE_PATH", "../../tmp/test_urls.log")
-	defer os.Remove("../../tmp/test_urls.log")
 
 	h := NewHandler(storage.New())
 

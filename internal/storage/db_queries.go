@@ -88,7 +88,7 @@ func FindValueInDB(value string) (Link, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	row := db.QueryRowContext(ctx, "SELECT link, key, is_deleted FROM urls WHERE link = $1 or key = $1", value)
+	row := db.QueryRowContext(ctx, "SELECT key, link, is_deleted FROM urls WHERE link = $1 or key = $1", value)
 	if err != nil {
 		log.Panic(err)
 	}

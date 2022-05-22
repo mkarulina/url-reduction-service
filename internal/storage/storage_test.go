@@ -1,22 +1,12 @@
 package storage
 
 import (
-	"github.com/mkarulina/url-reduction-service/config"
 	"github.com/stretchr/testify/require"
 	"log"
-	"os"
 	"testing"
 )
 
 func Test_storage_GetAllUrls(t *testing.T) {
-	_, err := config.LoadConfig("../../config")
-	if err != nil {
-		log.Fatal(err)
-	}
-	os.Setenv("BASE_URL", "http://testbaseurl.ru")
-	os.Setenv("FILE_STORAGE_PATH", "../../tmp/test_urls.log")
-	defer os.Remove("../../tmp/test_urls.log")
-
 	urls := []ResponseLink{
 		{Key: "testKey11", Link: "http://testhost.ru/11"},
 		{Key: "testKey12", Link: "http://testhost.ru/12"},
@@ -24,15 +14,15 @@ func Test_storage_GetAllUrls(t *testing.T) {
 	}
 
 	wantUrls := []ResponseLink{
-		{Key: "http://testbaseurl.ru/testKey11", Link: "http://testhost.ru/11"},
-		{Key: "http://testbaseurl.ru/testKey12", Link: "http://testhost.ru/12"},
-		{Key: "http://testbaseurl.ru/testKey13", Link: "http://testhost.ru/13"},
+		{Key: "/testKey11", Link: "http://testhost.ru/11"},
+		{Key: "/testKey12", Link: "http://testhost.ru/12"},
+		{Key: "/testKey13", Link: "http://testhost.ru/13"},
 	}
 
 	stg := New()
 
 	for i := 0; i < len(urls); i++ {
-		err = stg.AddLinkToDB(&Link{UserID: "test1", Key: urls[i].Key, Link: urls[i].Link})
+		err := stg.AddLinkToDB(&Link{UserID: "test1", Key: urls[i].Key, Link: urls[i].Link})
 		if err != nil {
 			log.Println("can't add link to db", err)
 		}
@@ -48,13 +38,6 @@ func Test_storage_GetAllUrls(t *testing.T) {
 }
 
 func Test_storage_GetKeyByLink(t *testing.T) {
-	_, err := config.LoadConfig("../../config")
-	if err != nil {
-		log.Fatal(err)
-	}
-	os.Setenv("FILE_STORAGE_PATH", "../../tmp/test_urls.log")
-	defer os.Remove("../../tmp/test_urls.log")
-
 	stg := New()
 
 	tests := []struct {
@@ -76,7 +59,7 @@ func Test_storage_GetKeyByLink(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			err = stg.AddLinkToDB(&Link{UserID: "test2", Key: tt.key, Link: tt.link})
+			err := stg.AddLinkToDB(&Link{UserID: "test2", Key: tt.key, Link: tt.link})
 			if err != nil {
 				log.Println("can't add link to db", err)
 			}
@@ -89,13 +72,6 @@ func Test_storage_GetKeyByLink(t *testing.T) {
 }
 
 func Test_storage_GetLinkByKey(t *testing.T) {
-	_, err := config.LoadConfig("../../config")
-	if err != nil {
-		log.Fatal(err)
-	}
-	os.Setenv("FILE_STORAGE_PATH", "../../tmp/test_urls.log")
-	defer os.Remove("../../tmp/test_urls.log")
-
 	stg := New()
 
 	tests := []struct {
@@ -117,7 +93,7 @@ func Test_storage_GetLinkByKey(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			err = stg.AddLinkToDB(&Link{UserID: "test3", Key: tt.key, Link: tt.link})
+			err := stg.AddLinkToDB(&Link{UserID: "test3", Key: tt.key, Link: tt.link})
 			if err != nil {
 				log.Println("can't add link to db", err)
 			}

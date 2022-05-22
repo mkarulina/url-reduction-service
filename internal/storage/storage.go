@@ -141,9 +141,6 @@ func (s *storage) GetKeyByLink(link string) string {
 	if err != nil {
 		log.Panic(err)
 	}
-	if sqlResp.IsDeleted == true {
-
-	}
 
 	foundKey = sqlResp.Key
 	return foundKey
@@ -176,7 +173,6 @@ func (s *storage) GetLinkByKey(linkKey string) *Link {
 			}
 			if readLine.Key == linkKey {
 				return readLine
-				break
 			}
 		}
 	}
@@ -196,7 +192,7 @@ func (s *storage) GetAllUrlsByUserID(userID string) ([]ResponseLink, error) {
 	if s.dbAddress == "" {
 		if s.file == "" {
 			for _, v := range s.urls {
-				if v.UserID == userID && v.IsDeleted != true {
+				if v.UserID == userID && !v.IsDeleted {
 					response = append(response, ResponseLink{Key: baseURL + "/" + v.Key, Link: v.Link})
 				}
 			}
@@ -217,7 +213,7 @@ func (s *storage) GetAllUrlsByUserID(userID string) ([]ResponseLink, error) {
 			if err != nil && err != io.EOF {
 				log.Fatal(err)
 			}
-			if readLine.UserID == userID && readLine.IsDeleted != true {
+			if readLine.UserID == userID && !readLine.IsDeleted {
 				response = append(response, ResponseLink{baseURL + "/" + readLine.Key, readLine.Link})
 			}
 		}
